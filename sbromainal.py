@@ -6,70 +6,69 @@ st.title("Self-billing AL")
 uploaded_file = st.file_uploader("Uploader un fichier XLSX", type=['xlsx'])
 
 if uploaded_file:
-    # Charger le fichier pour lister les valeurs Printing Location
     df = pd.read_excel(uploaded_file)
 
     if 'Printing Location' in df.columns:
-        unique_locations = df['Printing Location'].dropna().unique()
-        unique_locations.sort()
+        unique_locations = sorted(df['Printing Location'].dropna().unique())
 
-        brands_to_keep = st.multiselect(
-            "Sélectionnez les marques à GARDER (Printing Location) :",
-            options=unique_locations
-        )
+        st.subheader("👉 Cochez les marques à GARDER")
 
-        if st.button("Nettoyer le fichier") and brands_to_keep:
-            # Nettoyer avec la sélection
-            def clean_excel(df, brands_to_keep):
-                # Supprimer doublons Shift Code
-                if 'Shift Code' in df.columns:
-                    df = df.drop_duplicates(subset=['Shift Code'])
+        # ✅ FORM pour valider d'un coup
+        with st.form("filter_form"):
+            selected_brands = []
+            for location in unique_locations:
+                if st.checkbox(location, value=False):
+                    selected_brands.append(location)
 
-                # Filtrer Printing Location
-                pattern = '|'.join(brands_to_keep)
-                mask = df['Printing Location'].str.contains(pattern, case=False, na=False)
-                df = df[mask]
+            submit_button = st.form_submit_button("✅ Appliquer le filtre")
 
-                # Remplacer Ge Simons par Schenk Papendrecht
-                df['Printing Location'] = df['Printing Location'].str.replace(
-                    r'(?i)Ge Simons', 'Schenk Papendrecht', regex=True
+        if submit_button:
+            if not selected_brands:
+                st.warning("Veuillez cocher au moins une marque.")
+            else:
+                # Appliquer le nettoyage
+                def clean_excel(df, brands_to_keep):
+                    if 'Shift Code' in df.columns:
+                        df = df.drop_duplicates(subset=['Shift Code'])
+
+                    pattern = '|'.join(brands_to_keep)
+                    mask = df['Printing Location'].str.contains(pattern, case=False, na=False)
+                    df = df[mask]
+
+                    df['Printing Location'] = df['Printing Location'].str.replace(
+                        r'(?i)Ge Simons', 'Schenk Papendrecht', regex=True
+                    )
+
+                    for col in ['Start Date', 'End Date']:
+                        if col in df.columns:
+                            df[col] = pd.to_datetime(df[col], errors='coerce')
+                            df[f'{col} Only Date'] = df[col].dt.date
+                            df[f'{col} Only Time'] = df[col].dt.time
+
+                    if 'Tractor' in df.columns:
+                        df = df[~df['Tractor'].str.contains('SR-ALFI-LIN', na=False)]
+
+                    if 'trailer' in df.columns:
+                        df['trailer'] = df['trailer'].fillna('Operation maintenance')
+
+                    return df
+
+                cleaned_df = clean_excel(df, selected_brands)
+
+                st.success("✅ Fichier nettoyé :")
+                st.dataframe(cleaned_df)
+
+                @st.cache_data
+                def convert_df(df):
+                    return df.to_excel(index=False, engine='openpyxl')
+
+                output = convert_df(cleaned_df)
+
+                st.download_button(
+                    label="📥 Télécharger le fichier nettoyé",
+                    data=output,
+                    file_name='fichier_nettoye.xlsx',
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
-
-                # Colonnes Date / Time
-                for col in ['Start Date', 'End Date']:
-                    if col in df.columns:
-                        df[col] = pd.to_datetime(df[col], errors='coerce')
-                        df[f'{col} Only Date'] = df[col].dt.date
-                        df[f'{col} Only Time'] = df[col].dt.time
-
-                # Supprimer lignes SR-ALFI-LIN
-                if 'Tractor' in df.columns:
-                    df = df[~df['Tractor'].str.contains('SR-ALFI-LIN', na=False)]
-
-                # trailer vides → Operation maintenance
-                if 'trailer' in df.columns:
-                    df['trailer'] = df['trailer'].fillna('Operation maintenance')
-
-                return df
-
-            cleaned_df = clean_excel(df, brands_to_keep)
-
-            st.write("✅ Fichier nettoyé :")
-            st.dataframe(cleaned_df)
-
-            @st.cache_data
-            def convert_df(df):
-                return df.to_excel(index=False, engine='openpyxl')
-
-            output = convert_df(cleaned_df)
-
-            st.download_button(
-                label="📥 Télécharger le fichier nettoyé",
-                data=output,
-                file_name='fichier_nettoye.xlsx',
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-        elif st.button("Nettoyer le fichier") and not brands_to_keep:
-            st.warning("Veuillez sélectionner au moins une marque.")
     else:
         st.error("❌ La colonne 'Printing Location' est introuvable dans le fichier.")
