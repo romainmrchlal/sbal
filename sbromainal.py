@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import openpyxl
 
 def clean_excel(file):
     # Charger le fichier Excel
