@@ -62,9 +62,16 @@ if uploaded_file:
                 st.success("✅ Fichier nettoyé :")
                 st.dataframe(cleaned_df)
 
-                @st.cache_data
-                def convert_df(df):
-                    return df.to_excel(index=False, engine='openpyxl')
+    from io import BytesIO
+
+        @st.cache_data
+            def convert_df(df):
+                output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        output.seek(0)
+        return output
+
 
                 output = convert_df(cleaned_df)
 
