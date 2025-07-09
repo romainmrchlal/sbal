@@ -40,7 +40,7 @@ if uploaded_file:
                         r'(?i)Ge Simons', 'Schenk Papendrecht', regex=True
                     )
 
-                    # Écraser Start/End Date, créer Time juste après
+                    # Start Date / End Date ➜ écraser date, ajouter Time juste après
                     for col in ['Start Date', 'End Date']:
                         if col in df.columns:
                             df[col] = pd.to_datetime(df[col], errors='coerce')
@@ -49,17 +49,16 @@ if uploaded_file:
                             orig_col = f'{col}_orig'
                             df[orig_col] = df[col]
 
-                            # Écrase pour ne garder que la date
+                            # Écraser pour ne garder que la date
                             df[col] = df[col].dt.date
 
-                            # Crée Time
+                            # Créer Time
                             time_col = col.replace("Date", "Time")
                             df[time_col] = df[orig_col].dt.time
 
-                            # Supprimer colonne temporaire
                             df.drop(columns=[orig_col], inplace=True)
 
-                            # Réinsérer dans l'ordre logique
+                            # Réinsérer Time à droite
                             col_index = df.columns.get_loc(col)
                             cols = df.columns.tolist()
                             cols.remove(time_col)
@@ -70,9 +69,18 @@ if uploaded_file:
                     if 'Tractor' in df.columns:
                         df = df[~df['Tractor'].str.contains('SR-ALFI-LIN', na=False)]
 
-                    # Trailer vide → Operation maintenance
+                    # Remplir trailer vide
                     if 'trailer' in df.columns:
                         df['trailer'] = df['trailer'].fillna('Operation maintenance')
+
+                    # Remplacer Shift Kms par Corrected Kms si dispo
+                    if 'Shift Kms' in df.columns and 'Corrected Kms' in df.columns:
+                        df['Shift Kms'] = df.apply(
+                            lambda row: row['Corrected Kms'] if pd.notna(row['Corrected Kms']) else row['Shift Kms'],
+                            axis=1
+                        )
+                        # Supprimer Corrected Kms après merge
+                        df = df.drop(columns=['Corrected Kms'])
 
                     return df
 
