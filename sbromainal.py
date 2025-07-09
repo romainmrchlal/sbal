@@ -4,7 +4,7 @@ from io import BytesIO
 
 st.title("Self-billing AL")
 
-uploaded_file = st.file_uploader("Uploader un fichier XLSX", type=['xlsx'])
+uploaded_file = st.file_uploader("Charger un fichier XLSX", type=['xlsx'])
 
 if uploaded_file:
     # Lire le fichier
@@ -14,9 +14,9 @@ if uploaded_file:
         unique_locations = sorted(df['Printing Location'].dropna().unique())
 
         # Expander + multiselect pour une sélection propre
-        with st.expander("Sélectionnez les marques à GARDER"):
+        with st.expander("Sélectionnez les transporteurs à GARDER"):
             brands_to_keep = st.multiselect(
-                "Marques disponibles :",
+                "Transporteurs disponibles :",
                 options=unique_locations
             )
 
