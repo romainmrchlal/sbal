@@ -13,7 +13,7 @@ if uploaded_file:
     if 'Printing Location' in df.columns:
         unique_locations = sorted(df['Printing Location'].dropna().unique())
 
-        # Expander + multiselect
+        # Expander + multiselect pour un choix plus propre
         with st.expander("Sélectionnez les marques à GARDER"):
             brands_to_keep = st.multiselect(
                 "Marques disponibles :",
@@ -26,52 +26,58 @@ if uploaded_file:
                 st.warning("Veuillez sélectionner au moins une marque.")
             else:
                 def clean_excel(df, brands_to_keep):
-    if 'Shift Code' in df.columns:
-        df = df.drop_duplicates(subset=['Shift Code'])
+                    # Supprimer doublons Shift Code
+                    if 'Shift Code' in df.columns:
+                        df = df.drop_duplicates(subset=['Shift Code'])
 
-    pattern = '|'.join(brands_to_keep)
-    mask = df['Printing Location'].str.contains(pattern, case=False, na=False)
-    df = df[mask]
+                    # Filtrer Printing Location
+                    pattern = '|'.join(brands_to_keep)
+                    mask = df['Printing Location'].str.contains(pattern, case=False, na=False)
+                    df = df[mask]
 
-    df['Printing Location'] = df['Printing Location'].str.replace(
-        r'(?i)Ge Simons', 'Schenk Papendrecht', regex=True
-    )
+                    # Remplacer Ge Simons par Schenk Papendrecht
+                    df['Printing Location'] = df['Printing Location'].str.replace(
+                        r'(?i)Ge Simons', 'Schenk Papendrecht', regex=True
+                    )
 
-    for col in ['Start Date', 'End Date']:
-        if col in df.columns:
-            df[col] = pd.to_datetime(df[col], errors='coerce')
+                    # Insérer colonnes Date/Time à droite de Start/End Date
+                    for col in ['Start Date', 'End Date']:
+                        if col in df.columns:
+                            df[col] = pd.to_datetime(df[col], errors='coerce')
 
-            date_col = f'{col} Only Date'
-            time_col = f'{col} Only Time'
-            df[date_col] = df[col].dt.date
-            df[time_col] = df[col].dt.time
+                            date_col = f'{col} Only Date'
+                            time_col = f'{col} Only Time'
 
-            col_index = df.columns.get_loc(col)
-            cols = df.columns.tolist()
+                            df[date_col] = df[col].dt.date
+                            df[time_col] = df[col].dt.time
 
-            cols.remove(date_col)
-            cols.remove(time_col)
+                            col_index = df.columns.get_loc(col)
+                            cols = df.columns.tolist()
 
-            cols.insert(col_index + 1, date_col)
-            cols.insert(col_index + 2, time_col)
+                            cols.remove(date_col)
+                            cols.remove(time_col)
 
-            df = df[cols]
+                            cols.insert(col_index + 1, date_col)
+                            cols.insert(col_index + 2, time_col)
 
-    if 'Tractor' in df.columns:
-        df = df[~df['Tractor'].str.contains('SR-ALFI-LIN', na=False)]
+                            df = df[cols]
 
-    if 'trailer' in df.columns:
-        df['trailer'] = df['trailer'].fillna('Operation maintenance')
+                    # Supprimer lignes SR-ALFI-LIN
+                    if 'Tractor' in df.columns:
+                        df = df[~df['Tractor'].str.contains('SR-ALFI-LIN', na=False)]
 
-    return df
+                    # trailer vides → Operation maintenance
+                    if 'trailer' in df.columns:
+                        df['trailer'] = df['trailer'].fillna('Operation maintenance')
 
+                    return df
 
                 cleaned_df = clean_excel(df, brands_to_keep)
 
                 st.success("✅ Fichier nettoyé :")
                 st.dataframe(cleaned_df)
 
-                # ✅ Nouvelle version correcte : Excel → BytesIO
+                # Génération Excel en mémoire
                 @st.cache_data
                 def convert_df(df):
                     output = BytesIO()
