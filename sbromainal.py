@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from io import BytesIO
 
 st.title("Self-billing AL")
 
@@ -12,7 +13,7 @@ if uploaded_file:
     if 'Printing Location' in df.columns:
         unique_locations = sorted(df['Printing Location'].dropna().unique())
 
-        # Bloc plus esthétique : Expander + Multiselect
+        # Expander + multiselect
         with st.expander("Sélectionnez les marques à GARDER"):
             brands_to_keep = st.multiselect(
                 "Marques disponibles :",
@@ -56,22 +57,19 @@ if uploaded_file:
 
                     return df
 
-                # Nettoyage
                 cleaned_df = clean_excel(df, brands_to_keep)
 
                 st.success("✅ Fichier nettoyé :")
                 st.dataframe(cleaned_df)
 
-    from io import BytesIO
-
-        @st.cache_data
-            def convert_df(df):
-                output = BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False)
-        output.seek(0)
-        return output
-
+                # ✅ Nouvelle version correcte : Excel → BytesIO
+                @st.cache_data
+                def convert_df(df):
+                    output = BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        df.to_excel(writer, index=False)
+                    output.seek(0)
+                    return output
 
                 output = convert_df(cleaned_df)
 
