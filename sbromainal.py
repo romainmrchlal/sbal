@@ -13,7 +13,7 @@ if uploaded_file:
     if 'Printing Location' in df.columns:
         unique_locations = sorted(df['Printing Location'].dropna().unique())
 
-        # Expander + multiselect pour un choix plus propre
+        # Expander + multiselect pour une sélection propre
         with st.expander("Sélectionnez les marques à GARDER"):
             brands_to_keep = st.multiselect(
                 "Marques disponibles :",
@@ -40,33 +40,37 @@ if uploaded_file:
                         r'(?i)Ge Simons', 'Schenk Papendrecht', regex=True
                     )
 
-                    # Insérer colonnes Date/Time à droite de Start/End Date
+                    # Écraser Start/End Date, créer Time juste après
                     for col in ['Start Date', 'End Date']:
                         if col in df.columns:
                             df[col] = pd.to_datetime(df[col], errors='coerce')
 
-                            date_col = f'{col} Only Date'
-                            time_col = f'{col} Only Time'
+                            # Sauvegarde pour l'heure
+                            orig_col = f'{col}_orig'
+                            df[orig_col] = df[col]
 
-                            df[date_col] = df[col].dt.date
-                            df[time_col] = df[col].dt.time
+                            # Écrase pour ne garder que la date
+                            df[col] = df[col].dt.date
 
+                            # Crée Time
+                            time_col = col.replace("Date", "Time")
+                            df[time_col] = df[orig_col].dt.time
+
+                            # Supprimer colonne temporaire
+                            df.drop(columns=[orig_col], inplace=True)
+
+                            # Réinsérer dans l'ordre logique
                             col_index = df.columns.get_loc(col)
                             cols = df.columns.tolist()
-
-                            cols.remove(date_col)
                             cols.remove(time_col)
-
-                            cols.insert(col_index + 1, date_col)
-                            cols.insert(col_index + 2, time_col)
-
+                            cols.insert(col_index + 1, time_col)
                             df = df[cols]
 
                     # Supprimer lignes SR-ALFI-LIN
                     if 'Tractor' in df.columns:
                         df = df[~df['Tractor'].str.contains('SR-ALFI-LIN', na=False)]
 
-                    # trailer vides → Operation maintenance
+                    # Trailer vide → Operation maintenance
                     if 'trailer' in df.columns:
                         df['trailer'] = df['trailer'].fillna('Operation maintenance')
 
