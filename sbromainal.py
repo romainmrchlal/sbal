@@ -39,7 +39,7 @@ def clean_excel(file):
 
     return df
 
-st.title("Selb-billing")
+st.title("Self-billing")
 
 uploaded_file = st.file_uploader("Uploader un fichier XLSX", type=['xlsx'])
 
