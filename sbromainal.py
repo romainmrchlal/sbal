@@ -23,7 +23,7 @@ if uploaded_file:
         # Bouton pour lancer le nettoyage
         if st.button("✅ Nettoyer le fichier"):
             if not brands_to_keep:
-                st.warning("Veuillez sélectionner au moins une marque.")
+                st.warning("Veuillez sélectionner au moins un transporteur.")
             else:
                 def clean_excel(df, brands_to_keep):
                     # Supprimer doublons Shift Code
