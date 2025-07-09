@@ -26,36 +26,45 @@ if uploaded_file:
                 st.warning("Veuillez sélectionner au moins une marque.")
             else:
                 def clean_excel(df, brands_to_keep):
-                    # Supprimer doublons Shift Code
-                    if 'Shift Code' in df.columns:
-                        df = df.drop_duplicates(subset=['Shift Code'])
+    if 'Shift Code' in df.columns:
+        df = df.drop_duplicates(subset=['Shift Code'])
 
-                    # Filtrer Printing Location
-                    pattern = '|'.join(brands_to_keep)
-                    mask = df['Printing Location'].str.contains(pattern, case=False, na=False)
-                    df = df[mask]
+    pattern = '|'.join(brands_to_keep)
+    mask = df['Printing Location'].str.contains(pattern, case=False, na=False)
+    df = df[mask]
 
-                    # Remplacer Ge Simons par Schenk Papendrecht
-                    df['Printing Location'] = df['Printing Location'].str.replace(
-                        r'(?i)Ge Simons', 'Schenk Papendrecht', regex=True
-                    )
+    df['Printing Location'] = df['Printing Location'].str.replace(
+        r'(?i)Ge Simons', 'Schenk Papendrecht', regex=True
+    )
 
-                    # Colonnes Date / Time
-                    for col in ['Start Date', 'End Date']:
-                        if col in df.columns:
-                            df[col] = pd.to_datetime(df[col], errors='coerce')
-                            df[f'{col} Only Date'] = df[col].dt.date
-                            df[f'{col} Only Time'] = df[col].dt.time
+    for col in ['Start Date', 'End Date']:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors='coerce')
 
-                    # Supprimer lignes SR-ALFI-LIN
-                    if 'Tractor' in df.columns:
-                        df = df[~df['Tractor'].str.contains('SR-ALFI-LIN', na=False)]
+            date_col = f'{col} Only Date'
+            time_col = f'{col} Only Time'
+            df[date_col] = df[col].dt.date
+            df[time_col] = df[col].dt.time
 
-                    # trailer vides → Operation maintenance
-                    if 'trailer' in df.columns:
-                        df['trailer'] = df['trailer'].fillna('Operation maintenance')
+            col_index = df.columns.get_loc(col)
+            cols = df.columns.tolist()
 
-                    return df
+            cols.remove(date_col)
+            cols.remove(time_col)
+
+            cols.insert(col_index + 1, date_col)
+            cols.insert(col_index + 2, time_col)
+
+            df = df[cols]
+
+    if 'Tractor' in df.columns:
+        df = df[~df['Tractor'].str.contains('SR-ALFI-LIN', na=False)]
+
+    if 'trailer' in df.columns:
+        df['trailer'] = df['trailer'].fillna('Operation maintenance')
+
+    return df
+
 
                 cleaned_df = clean_excel(df, brands_to_keep)
 
